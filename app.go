@@ -27,7 +27,7 @@ func AllUsersEndPoint(w http.ResponseWriter, r *http.Request) {
 
 // FindUserEndpoint will GET a users by its ID
 func FindUserEndpoint(w http.ResponseWriter, r *http.Request) {
-	if params := r.Context().Value(varsKey); params != nil {
+	if params := r.Context(); params != nil {
 		return params.(map[string]string)
 	}
 	user, err := dao.FindById(params["id"])

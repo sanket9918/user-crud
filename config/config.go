@@ -2,10 +2,11 @@ package config
 
 import (
 	"log"
-
+	
 	"github.com/BurntSushi/toml"
 )
 
+// Config type
 // Represents database server and credentials
 type Config struct {
 	Server   string
