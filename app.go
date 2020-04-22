@@ -5,19 +5,20 @@ import (
 	"log"
 	"net/http"
 
-	"go.mongodb.org/mongo-driver/bson"
+	// "go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 
 	"golang-rest-api-mongo/config"
 	"golang-rest-api-mongo/dao"
 	"golang-rest-api-mongo/models"
 )
 
-var config = Config{}
-var dao = UsersDAO{}
+var conf = config.Config{}
+var dAo = dao.DAO{}
 
 // AllUsersEndPoint will GET list of users
 func AllUsersEndPoint(w http.ResponseWriter, r *http.Request) {
-	users, err := dao.FindAll()
+	users, err := dAo.FindAll()
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -28,9 +29,9 @@ func AllUsersEndPoint(w http.ResponseWriter, r *http.Request) {
 // FindUserEndpoint will GET a users by its ID
 func FindUserEndpoint(w http.ResponseWriter, r *http.Request) {
 	if params := r.Context(); params != nil {
-		return params.(map[string]string)
+		return params.(iota)
 	}
-	user, err := dao.FindById(params["id"])
+	user, err := dAo.FindByID(params["id"])
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "Invalid user ID")
 		return
@@ -41,13 +42,13 @@ func FindUserEndpoint(w http.ResponseWriter, r *http.Request) {
 // CreateUserEndPoint will POST a new user
 func CreateUserEndPoint(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
-	var user User
+	var user models.User
 	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
 		respondWithError(w, http.StatusBadRequest, "Invalid request payload")
 		return
 	}
-	user.ID = bson.NewObjectId()
-	if err := dao.Insert(user); err != nil {
+	user.ID = primitive.NewObjectID()
+	if err := dAo.Insert(user); err != nil {
 		respondWithError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -55,33 +56,33 @@ func CreateUserEndPoint(w http.ResponseWriter, r *http.Request) {
 }
 
 // UpdateUserEndPoint will PUT update an existing user
-func UpdateUserEndPoint(w http.ResponseWriter, r *http.Request) {
-	defer r.Body.Close()
-	if params := r.Context().Value(varsKey); params != nil {
-		return params.(map[string]string)
-	}
-	var user User
-	user.ID = bson.ObjectIdHex(params["id"])
-	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
-		respondWithError(w, http.StatusBadRequest, "Invalid request payload")
-		return
-	}
-	if err := dao.Update(user); err != nil {
-		respondWithError(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	respondWithJSON(w, http.StatusOK, map[string]string{"result": "success"})
-}
+// func UpdateUserEndPoint(w http.ResponseWriter, r *http.Request) {
+// 	defer r.Body.Close()
+// 	if params := r.Context(); params != nil {
+// 		return params.(map[string]string)
+// 	}
+// 	var user models.User
+// 	user.ID = primitive.NewObjectId(params["id"])
+// 	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
+// 		respondWithError(w, http.StatusBadRequest, "Invalid request payload")
+// 		return
+// 	}
+// 	if err := dAo.Update(user); err != nil {
+// 		respondWithError(w, http.StatusInternalServerError, err.Error())
+// 		return
+// 	}
+// 	respondWithJSON(w, http.StatusOK, map[string]string{"result": "success"})
+// }
 
 // DeleteUserEndPoint will DELETE an existing user
 func DeleteUserEndPoint(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
-	var user User
+	var user models.User
 	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
 		respondWithError(w, http.StatusBadRequest, "Invalid request payload")
 		return
 	}
-	if err := dao.Delete(user); err != nil {
+	if err := dAo.Delete(user); err != nil {
 		respondWithError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -101,11 +102,11 @@ func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
 
 // Parse the configuration file 'config.toml', and establish a connection to DB
 func init() {
-	config.Read()
+	conf.Read()
 
-	dao.Server = config.Server
-	dao.Database = config.Database
-	dao.Connect()
+	dAo.Server = conf.Server
+	dAo.Database = conf.Database
+	dAo.Connection()
 }
 
 // Define HTTP request routes
