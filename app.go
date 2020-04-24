@@ -1,24 +1,26 @@
 package main
 
 import (
+	// "context"
 	"encoding/json"
 	"log"
 	"net/http"
+	"regexp"
 
-	// "go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	// "go.mongodb.org/mongo-driver/bson"
 
 	"golang-rest-api-mongo/config"
-	"golang-rest-api-mongo/dao"
+	"golang-rest-api-mongo/dataaccessobject"
 	"golang-rest-api-mongo/models"
 )
 
 var conf = config.Config{}
-var dAo = dao.DAO{}
+var dao = dataaccessobject.DAO{}
 
 // AllUsersEndPoint will GET list of users
 func AllUsersEndPoint(w http.ResponseWriter, r *http.Request) {
-	users, err := dAo.FindAll()
+	users, err := dao.FindAll()
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -27,17 +29,18 @@ func AllUsersEndPoint(w http.ResponseWriter, r *http.Request) {
 }
 
 // FindUserEndpoint will GET a users by its ID
-func FindUserEndpoint(w http.ResponseWriter, r *http.Request) {
-	if params := r.Context(); params != nil {
-		return params.(iota)
-	}
-	user, err := dAo.FindByID(params["id"])
-	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "Invalid user ID")
-		return
-	}
-	respondWithJSON(w, http.StatusOK, user)
-}
+// func FindUserEndpoint(w http.ResponseWriter, r *http.Request) {
+// 	var params interface{}
+// 	if params := r.Context(); params != nil {
+// 		return params
+// 	}
+// 	user, err := dao.FindByID(bson.D{primitive.E{Key: "_id", Value: params["id"]}})
+// 	if err != nil {
+// 		respondWithError(w, http.StatusBadRequest, "Invalid user ID")
+// 		return
+// 	}
+// 	respondWithJSON(w, http.StatusOK, user)
+// }
 
 // CreateUserEndPoint will POST a new user
 func CreateUserEndPoint(w http.ResponseWriter, r *http.Request) {
@@ -48,7 +51,7 @@ func CreateUserEndPoint(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	user.ID = primitive.NewObjectID()
-	if err := dAo.Insert(user); err != nil {
+	if err := dao.Insert(user); err != nil {
 		respondWithError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -59,7 +62,7 @@ func CreateUserEndPoint(w http.ResponseWriter, r *http.Request) {
 // func UpdateUserEndPoint(w http.ResponseWriter, r *http.Request) {
 // 	defer r.Body.Close()
 // 	if params := r.Context(); params != nil {
-// 		return params.(map[string]string)
+// 		return params.(context)
 // 	}
 // 	var user models.User
 // 	user.ID = primitive.NewObjectId(params["id"])
@@ -67,7 +70,7 @@ func CreateUserEndPoint(w http.ResponseWriter, r *http.Request) {
 // 		respondWithError(w, http.StatusBadRequest, "Invalid request payload")
 // 		return
 // 	}
-// 	if err := dAo.Update(user); err != nil {
+// 	if err := dao.Update(user); err != nil {
 // 		respondWithError(w, http.StatusInternalServerError, err.Error())
 // 		return
 // 	}
@@ -82,7 +85,7 @@ func DeleteUserEndPoint(w http.ResponseWriter, r *http.Request) {
 		respondWithError(w, http.StatusBadRequest, "Invalid request payload")
 		return
 	}
-	if err := dAo.Delete(user); err != nil {
+	if err := dao.Delete(user); err != nil {
 		respondWithError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -104,18 +107,31 @@ func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
 func init() {
 	conf.Read()
 
-	dAo.Server = conf.Server
-	dAo.Database = conf.Database
-	dAo.Connection()
+	dao.Server = conf.Server
+	dao.Database = conf.Database
+	dao.Connection()
+}
+
+var validPath = regexp.MustCompile("^/users/([a-zA-Z0-9]+)$")
+
+func makeHandler(fn func(http.ResponseWriter, *http.Request, string)) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		m := validPath.FindStringSubmatch(r.URL.Path)
+		if m == nil {
+			http.NotFound(w, r)
+			return
+		}
+		fn(w, r, m[2])
+	}
 }
 
 // Define HTTP request routes
 func main() {
-	http.HandleFunc("/users", AllUsersEndPoint).Methods("GET")
-	http.HandleFunc("/users", CreateUserEndPoint).Methods("POST")
-	http.HandleFunc("/users/{id}", UpdateUserEndPoint).Methods("PUT")
-	http.HandleFunc("/users", DeleteUserEndPoint).Methods("DELETE")
-	http.HandleFunc("/users/{id}", FindUserEndpoint).Methods("GET")
+	http.HandleFunc("/users", makeHandler(AllUsersEndPoint))
+	http.HandleFunc("/users", makeHandler(CreateUserEndPoint))
+	http.HandleFunc("/users/{id}", makeHandler(UpdateUserEndPoint))
+	http.HandleFunc("/users", makeHandler(DeleteUserEndPoint))
+	http.HandleFunc("/users/{id}", makeHandler(FindUserEndpoint))
 	if err := http.ListenAndServe(":3000", nil); err != nil {
 		log.Fatal(err)
 	}

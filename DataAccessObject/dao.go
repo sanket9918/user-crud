@@ -1,4 +1,4 @@
-package dao
+package dataaccessobject
 
 import (
 	"context"
@@ -53,10 +53,8 @@ func (m *DAO) FindAll() ([]models.User, error) {
 // FindByID will find a user by its id
 func (m *DAO) FindByID(id string) (models.User, error) {
 	var user models.User
-	opts := options.FindOneAndUpdate().SetUpsert(true)
-	filter := bson.D{primitive.E{Key:"_id", Value:id}}
-	update := bson.D{primitive.E{Key:"$set", Value:&user}}
-	err := db.Collection(COLLECTION).FindOneAndUpdate(context.TODO(), filter, update, opts).Decode(&user)
+	opts := options.FindOne().SetSort(bson.D{})
+	err := db.Collection(COLLECTION).FindOne(context.TODO(), bson.D{primitive.E{Key: "_id", Value: id}}, opts).Decode(&user)
 	if err != nil {
 		// ErrNoDocuments means that the filter did not match any documents in the collection
 		if err == mongo.ErrNoDocuments {
@@ -64,16 +62,12 @@ func (m *DAO) FindByID(id string) (models.User, error) {
 		}
 		log.Fatal(err)
 	}
-	// err := db.Collection(COLLECTION).FindOne(context.TODO(), primitive.ObjectIDFromHex(id))
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
 	return user, err
 }
 
 // Insert a user into database
 func (m *DAO) Insert(user models.User) error {
-	_, err := db.Collection(COLLECTION).InsertOne(context.TODO(), &user)
+	_, err := db.Collection(COLLECTION).InsertOne(context.TODO(), bson.D{primitive.E{Key: "_id", Value: &user}})
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -82,8 +76,13 @@ func (m *DAO) Insert(user models.User) error {
 
 // Delete an existing user
 func (m *DAO) Delete(user models.User) error {
-	_, err := db.Collection(COLLECTION).DeleteOne(context.TODO(), &user)
+	opts := options.FindOneAndDelete().SetProjection(bson.D{primitive.E{Key: "_id", Value: &user}})
+	err := db.Collection(COLLECTION).FindOneAndDelete(context.TODO(), bson.D{primitive.E{Key: "_id", Value: &user}}, opts).Decode(&user)
 	if err != nil {
+		// ErrNoDocuments means that the filter did not match any documents in the collection
+		if err == mongo.ErrNoDocuments {
+			return err
+		}
 		log.Fatal(err)
 	}
 	return err
@@ -92,8 +91,8 @@ func (m *DAO) Delete(user models.User) error {
 // Update an existing user
 func (m *DAO) Update(user models.User) error {
 	opts := options.Update().SetUpsert(true)
-	filter := bson.D{primitive.E{Key:"_id", Value:user.ID}}
-	update := bson.D{primitive.E{Key:"$set", Value:bson.D{primitive.E{Key:"_id", Value:&user}}}}
+	filter := bson.D{primitive.E{Key: "_id", Value: user.ID}}
+	update := bson.D{primitive.E{Key: "$set", Value: bson.D{primitive.E{Key: "_id", Value: &user}}}}
 	_, err := db.Collection(COLLECTION).UpdateOne(context.TODO(), filter, update, opts)
 	if err != nil {
 		log.Fatal(err)
