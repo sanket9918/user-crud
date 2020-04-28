@@ -38,8 +38,7 @@ func (m *DAO) Connection() {
 }
 
 // FindAll list of users
-func (m *DAO) FindAll() ([]models.User, error) {
-	var users []models.User
+func (m *DAO) FindAll() (users []models.User, err error) {
 	cursor, err := db.Collection(COLLECTION).Find(context.TODO(), bson.M{})
 	if err != nil {
 		log.Fatal(err)
@@ -51,10 +50,9 @@ func (m *DAO) FindAll() ([]models.User, error) {
 }
 
 // FindByID will find a user by its id
-func (m *DAO) FindByID(id string) (models.User, error) {
-	var user models.User
+func (m *DAO) FindByID(id string) (user models.User, err error) {
 	opts := options.FindOne().SetSort(bson.D{})
-	err := db.Collection(COLLECTION).FindOne(context.TODO(), bson.D{primitive.E{Key: "_id", Value: id}}, opts).Decode(&user)
+	err = db.Collection(COLLECTION).FindOne(context.TODO(), bson.D{primitive.E{Key: "_id", Value: id}}, opts).Decode(&user)
 	if err != nil {
 		// ErrNoDocuments means that the filter did not match any documents in the collection
 		if err == mongo.ErrNoDocuments {
@@ -66,8 +64,8 @@ func (m *DAO) FindByID(id string) (models.User, error) {
 }
 
 // Insert a user into database
-func (m *DAO) Insert(user models.User) error {
-	_, err := db.Collection(COLLECTION).InsertOne(context.TODO(), bson.D{primitive.E{Key: "_id", Value: &user}})
+func (m *DAO) Insert(user models.User) (err error) {
+	_, err = db.Collection(COLLECTION).InsertOne(context.TODO(), bson.D{primitive.E{Key: "_id", Value: &user}})
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -75,9 +73,9 @@ func (m *DAO) Insert(user models.User) error {
 }
 
 // Delete an existing user
-func (m *DAO) Delete(user models.User) error {
+func (m *DAO) Delete(user models.User) (err error) {
 	opts := options.FindOneAndDelete().SetProjection(bson.D{primitive.E{Key: "_id", Value: &user}})
-	err := db.Collection(COLLECTION).FindOneAndDelete(context.TODO(), bson.D{primitive.E{Key: "_id", Value: &user}}, opts).Decode(&user)
+	err = db.Collection(COLLECTION).FindOneAndDelete(context.TODO(), bson.D{primitive.E{Key: "_id", Value: &user}}, opts).Decode(&user)
 	if err != nil {
 		// ErrNoDocuments means that the filter did not match any documents in the collection
 		if err == mongo.ErrNoDocuments {
@@ -89,11 +87,11 @@ func (m *DAO) Delete(user models.User) error {
 }
 
 // Update an existing user
-func (m *DAO) Update(user models.User) error {
+func (m *DAO) Update(user models.User) (err error) {
 	opts := options.Update().SetUpsert(true)
 	filter := bson.D{primitive.E{Key: "_id", Value: user.ID}}
 	update := bson.D{primitive.E{Key: "$set", Value: bson.D{primitive.E{Key: "_id", Value: &user}}}}
-	_, err := db.Collection(COLLECTION).UpdateOne(context.TODO(), filter, update, opts)
+	_, err = db.Collection(COLLECTION).UpdateOne(context.TODO(), filter, update, opts)
 	if err != nil {
 		log.Fatal(err)
 	}
