@@ -1,14 +1,12 @@
 package main
 
 import (
-	// "context"
 	"encoding/json"
 	"log"
 	"net/http"
 	"regexp"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	// "go.mongodb.org/mongo-driver/bson"
 
 	"golang-rest-api-mongo/config"
 	"golang-rest-api-mongo/dataaccessobject"
@@ -29,27 +27,27 @@ func AllUsersEndPoint(w http.ResponseWriter, r *http.Request) {
 }
 
 // FindUserEndpoint will GET a users by its ID
-// func FindUserEndpoint(w http.ResponseWriter, r *http.Request) {
-// 	var params interface{}
-// 	if params := r.Context(); params != nil {
-// 		return params
-// 	}
-// 	user, err := dao.FindByID(bson.D{primitive.E{Key: "_id", Value: params["id"]}})
-// 	if err != nil {
-// 		respondWithError(w, http.StatusBadRequest, "Invalid user ID")
-// 		return
-// 	}
-// 	respondWithJSON(w, http.StatusOK, user)
-// }
+func FindUserEndpoint(w http.ResponseWriter, r *http.Request, id string) {
+	user, err := dao.FindByID(id)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "Invalid user ID")
+		return
+	}
+	respondWithJSON(w, http.StatusOK, user)
+}
 
 // CreateUserEndPoint will POST a new user
 func CreateUserEndPoint(w http.ResponseWriter, r *http.Request) {
-	defer r.Body.Close()
 	var user models.User
+	if r.Body == nil {
+		http.Error(w, "Please send a request body", 400)
+		return
+	}
 	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
 		respondWithError(w, http.StatusBadRequest, "Invalid request payload")
 		return
 	}
+	defer r.Body.Close()
 	user.ID = primitive.NewObjectID()
 	if err := dao.Insert(user); err != nil {
 		respondWithError(w, http.StatusInternalServerError, err.Error())
@@ -59,32 +57,34 @@ func CreateUserEndPoint(w http.ResponseWriter, r *http.Request) {
 }
 
 // UpdateUserEndPoint will PUT update an existing user
-// func UpdateUserEndPoint(w http.ResponseWriter, r *http.Request) {
-// 	defer r.Body.Close()
-// 	if params := r.Context(); params != nil {
-// 		return params.(context)
-// 	}
-// 	var user models.User
-// 	user.ID = primitive.NewObjectId(params["id"])
-// 	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
-// 		respondWithError(w, http.StatusBadRequest, "Invalid request payload")
-// 		return
-// 	}
-// 	if err := dao.Update(user); err != nil {
-// 		respondWithError(w, http.StatusInternalServerError, err.Error())
-// 		return
-// 	}
-// 	respondWithJSON(w, http.StatusOK, map[string]string{"result": "success"})
-// }
+func UpdateUserEndPoint(w http.ResponseWriter, r *http.Request, id string) {
+	var user models.User
+	var err error
+	user.ID, err = primitive.ObjectIDFromHex(id)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
+		respondWithError(w, http.StatusBadRequest, "Invalid request payload")
+		return
+	}
+	defer r.Body.Close()
+	if err := dao.Update(user); err != nil {
+		respondWithError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	respondWithJSON(w, http.StatusOK, map[string]string{"result": "success"})
+}
 
 // DeleteUserEndPoint will DELETE an existing user
 func DeleteUserEndPoint(w http.ResponseWriter, r *http.Request) {
-	defer r.Body.Close()
 	var user models.User
 	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
 		respondWithError(w, http.StatusBadRequest, "Invalid request payload")
 		return
 	}
+	defer r.Body.Close()
 	if err := dao.Delete(user); err != nil {
 		respondWithError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -103,16 +103,7 @@ func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
 	w.Write(response)
 }
 
-// Parse the configuration file 'config.toml', and establish a connection to DB
-func init() {
-	conf.Read()
-
-	dao.Server = conf.Server
-	dao.Database = conf.Database
-	dao.Connection()
-}
-
-var validPath = regexp.MustCompile("^/users/([a-zA-Z0-9]+)$")
+var validPath = regexp.MustCompile("^/user/(update|delete|find)/([a-zA-Z0-9]+)$")
 
 func makeHandler(fn func(http.ResponseWriter, *http.Request, string)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -125,13 +116,22 @@ func makeHandler(fn func(http.ResponseWriter, *http.Request, string)) http.Handl
 	}
 }
 
+// Parse the configuration file 'config.toml', and establish a connection to DB
+func init() {
+	conf.Read()
+
+	dao.Server = conf.Server
+	dao.Database = conf.Database
+	dao.Connection()
+}
+
 // Define HTTP request routes
 func main() {
-	http.HandleFunc("/users", makeHandler(AllUsersEndPoint))
-	http.HandleFunc("/users", makeHandler(CreateUserEndPoint))
-	http.HandleFunc("/users/{id}", makeHandler(UpdateUserEndPoint))
-	http.HandleFunc("/users", makeHandler(DeleteUserEndPoint))
-	http.HandleFunc("/users/{id}", makeHandler(FindUserEndpoint))
+	http.HandleFunc("/users", AllUsersEndPoint)
+	http.HandleFunc("/users/new", CreateUserEndPoint)
+	http.HandleFunc("/users/update/{id}", makeHandler(UpdateUserEndPoint))
+	http.HandleFunc("/users/delete/{id}", DeleteUserEndPoint)
+	http.HandleFunc("/users/find/{id}", makeHandler(FindUserEndpoint))
 	if err := http.ListenAndServe(":3000", nil); err != nil {
 		log.Fatal(err)
 	}
