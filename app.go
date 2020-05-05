@@ -78,7 +78,7 @@ func UpdateUserEndPoint(w http.ResponseWriter, r *http.Request, id string) {
 }
 
 // DeleteUserEndPoint will DELETE an existing user
-func DeleteUserEndPoint(w http.ResponseWriter, r *http.Request) {
+func DeleteUserEndPoint(w http.ResponseWriter, r *http.Request, id string) {
 	var user models.User
 	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
 		respondWithError(w, http.StatusBadRequest, "Invalid request payload")
@@ -130,7 +130,7 @@ func main() {
 	http.HandleFunc("/users", AllUsersEndPoint)
 	http.HandleFunc("/users/new", CreateUserEndPoint)
 	http.HandleFunc("/users/update/{id}", makeHandler(UpdateUserEndPoint))
-	http.HandleFunc("/users/delete/{id}", DeleteUserEndPoint)
+	http.HandleFunc("/users/delete/{id}", makeHandler(DeleteUserEndPoint))
 	http.HandleFunc("/users/find/{id}", makeHandler(FindUserEndpoint))
 	if err := http.ListenAndServe(":3000", nil); err != nil {
 		log.Fatal(err)

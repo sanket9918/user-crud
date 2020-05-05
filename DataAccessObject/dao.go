@@ -3,6 +3,7 @@ package dataaccessobject
 import (
 	"context"
 	"log"
+	"time"
 
 	"golang-rest-api-mongo/models"
 
@@ -28,8 +29,9 @@ const (
 
 // Connection to database
 func (m *DAO) Connection() {
+	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
 	clientOpts := options.Client().ApplyURI(m.Server)
-	client, err := mongo.Connect(context.TODO(), clientOpts)
+	client, err := mongo.Connect(ctx, clientOpts)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -39,7 +41,9 @@ func (m *DAO) Connection() {
 
 // FindAll list of users
 func (m *DAO) FindAll() (users []models.User, err error) {
-	cursor, err := db.Collection(COLLECTION).Find(context.TODO(), bson.M{})
+	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+	res := bson.M{}
+	cursor, err := db.Collection(COLLECTION).Find(ctx, res)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -65,7 +69,9 @@ func (m *DAO) FindByID(id string) (user models.User, err error) {
 
 // Insert a user into database
 func (m *DAO) Insert(user models.User) (err error) {
-	_, err = db.Collection(COLLECTION).InsertOne(context.TODO(), bson.D{primitive.E{Key: "_id", Value: &user}})
+	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
+	filter := bson.D{primitive.E{Key: "_id", Value: &user}}
+	_, err = db.Collection(COLLECTION).InsertOne(ctx, filter)
 	if err != nil {
 		log.Fatal(err)
 	}
