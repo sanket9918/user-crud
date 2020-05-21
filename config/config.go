@@ -2,11 +2,10 @@ package config
 
 import (
 	"log"
-	
-	"github.com/BurntSushi/toml"
+	"encoding/json"
+	"os"
 )
 
-// Config type
 // Represents database server and credentials
 type Config struct {
 	Server   string
@@ -15,7 +14,12 @@ type Config struct {
 
 // Read and parse the configuration file
 func (c *Config) Read() {
-	if _, err := toml.DecodeFile("config.toml", &c); err != nil {
-		log.Fatal(err)
+	file, _ := os.Open("conf.json")
+	defer file.Close()
+	decoder := json.NewDecoder(file)
+	configuration := Config{}
+	err := decoder.Decode(&configuration)
+	if err != nil {
+		log.Fatal("error:", err)
 	}
 }
