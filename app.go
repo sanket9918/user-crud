@@ -8,9 +8,9 @@ import (
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
 
-	"golang-rest-api-mongo/config"
-	"golang-rest-api-mongo/dataaccessobject"
-	"golang-rest-api-mongo/models"
+	"user-crud/config"
+	"user-crud/dataaccessobject"
+	"user-crud/models"
 )
 
 var conf = config.Config{}
