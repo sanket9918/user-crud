@@ -5,7 +5,7 @@ import (
 	"log"
 	"time"
 
-	"golang-rest-api-mongo/models"
+	"user-crud/models"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -70,7 +70,7 @@ func (m *DAO) FindByID(id string) (user models.User, err error) {
 // Insert a user into database
 func (m *DAO) Insert(user models.User) (err error) {
 	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
-	filter := bson.D{primitive.E{Key: "_id", Value: &user}}
+	filter := bson.D{primitive.E{Key: "_id", Value: &user.ID}}
 	_, err = db.Collection(COLLECTION).InsertOne(ctx, filter)
 	if err != nil {
 		log.Fatal(err)
@@ -96,7 +96,7 @@ func (m *DAO) Delete(user models.User) (err error) {
 func (m *DAO) Update(user models.User) (err error) {
 	opts := options.Update().SetUpsert(true)
 	filter := bson.D{primitive.E{Key: "_id", Value: user.ID}}
-	update := bson.D{primitive.E{Key: "$set", Value: bson.D{primitive.E{Key: "_id", Value: &user}}}}
+	update := bson.D{primitive.E{Key: "$set", Value: bson.D{primitive.E{Key: "_id", Value: &use.IDr}}}}
 	_, err = db.Collection(COLLECTION).UpdateOne(context.TODO(), filter, update, opts)
 	if err != nil {
 		log.Fatal(err)
