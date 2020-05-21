@@ -20,6 +20,7 @@ type DAO struct {
 	Database string
 }
 
+// Database variable declaration
 var db *mongo.Database
 
 // COLLECTION declaration
@@ -56,7 +57,7 @@ func (m *DAO) FindAll() (users []models.User, err error) {
 // FindByID will find a user by its id
 func (m *DAO) FindByID(id string) (user models.User, err error) {
 	opts := options.FindOne().SetSort(bson.D{})
-	err = db.Collection(COLLECTION).FindOne(context.TODO(), bson.D{primitive.E{Key: "_id", Value: id}}, opts).Decode(&user)
+	err = db.Collection(COLLECTION).FindOne(context.TODO(), bson.D{primitive.E{Key: "_id", Value: &user.ID}}, opts).Decode(&user)
 	if err != nil {
 		// ErrNoDocuments means that the filter did not match any documents in the collection
 		if err == mongo.ErrNoDocuments {
@@ -70,8 +71,7 @@ func (m *DAO) FindByID(id string) (user models.User, err error) {
 // Insert a user into database
 func (m *DAO) Insert(user models.User) (err error) {
 	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
-	filter := bson.D{primitive.E{Key: "_id", Value: &user.ID}}
-	_, err = db.Collection(COLLECTION).InsertOne(ctx, filter)
+	_, err = db.Collection(COLLECTION).InsertOne(ctx, &user)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -96,7 +96,7 @@ func (m *DAO) Delete(user models.User) (err error) {
 func (m *DAO) Update(user models.User) (err error) {
 	opts := options.Update().SetUpsert(true)
 	filter := bson.D{primitive.E{Key: "_id", Value: user.ID}}
-	update := bson.D{primitive.E{Key: "$set", Value: bson.D{primitive.E{Key: "_id", Value: &use.IDr}}}}
+	update := bson.D{primitive.E{Key: "$set", Value: &user}}
 	_, err = db.Collection(COLLECTION).UpdateOne(context.TODO(), filter, update, opts)
 	if err != nil {
 		log.Fatal(err)
