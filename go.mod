@@ -1,4 +1,4 @@
-module user-crud
+module github.com/BryanSouza91/user-crud
 
 go 1.14
 
