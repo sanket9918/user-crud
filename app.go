@@ -4,116 +4,138 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"regexp"
+	"os"
 
-	"gopkg.in/mgo.v2/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 
-	"github.com/gorilla/mux"
-	. "./config"
-	. "./dao"
-	. "./models"
+	"github.com/BryanSouza91/user-crud/dataaccessobject"
+	"github.com/BryanSouza91/user-crud/models"
+)
+var (
+	dao = dataaccessobject.DAO{}
+	validPath = regexp.MustCompile("^/users/(update|delete|find)/([a-zA-Z0-9]+)$")
 )
 
-var config = Config{}
-var dao = UsersDAO{}
-
-// GET list of users
-func AllUsersEndPoint(w http.ResponseWriter, r *http.Request) {
+// AllUsersEndpoint will GET list of users
+func AllUsersEndpoint(w http.ResponseWriter, r *http.Request) {
 	users, err := dao.FindAll()
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	respondWithJson(w, http.StatusOK, users)
+	respondWithJSON(w, http.StatusOK, users)
 }
 
-// GET a users by its ID
-func FindUserEndpoint(w http.ResponseWriter, r *http.Request) {
-	params := mux.Vars(r)
-	user, err := dao.FindById(params["id"])
+// FindUserEndpoint will GET a users by its ID
+func FindUserEndpoint(w http.ResponseWriter, r *http.Request, id string) {
+	user, err := dao.FindByID(id)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "Invalid user ID")
 		return
 	}
-	respondWithJson(w, http.StatusOK, user)
+	respondWithJSON(w, http.StatusOK, user)
 }
 
-// POST a new user
-func CreateUserEndPoint(w http.ResponseWriter, r *http.Request) {
-	defer r.Body.Close()
-	var user User
+// CreateUserEndpoint will POST a new user
+func CreateUserEndpoint(w http.ResponseWriter, r *http.Request) {
+	var user models.User
+	if r.Body == nil {
+		http.Error(w, "Please send a request body", 400)
+		return
+	}
 	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
 		respondWithError(w, http.StatusBadRequest, "Invalid request payload")
 		return
 	}
-	user.ID = bson.NewObjectId()
+	defer r.Body.Close()
+	user.ID = primitive.NewObjectID()
 	if err := dao.Insert(user); err != nil {
 		respondWithError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	respondWithJson(w, http.StatusCreated, user)
+	respondWithJSON(w, http.StatusCreated, user)
 }
 
-// PUT update an existing user
-func UpdateUserEndPoint(w http.ResponseWriter, r *http.Request) {
-	defer r.Body.Close()
-	params := mux.Vars(r)
-	var user User
-	user.ID = bson.ObjectIdHex(params["id"])
+// UpdateUserEndpoint will PUT update an existing user
+func UpdateUserEndpoint(w http.ResponseWriter, r *http.Request, id string) {
+	var user models.User
+	var err error
+	user.ID, err = primitive.ObjectIDFromHex(id)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
 	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
 		respondWithError(w, http.StatusBadRequest, "Invalid request payload")
 		return
 	}
+	defer r.Body.Close()
 	if err := dao.Update(user); err != nil {
 		respondWithError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	respondWithJson(w, http.StatusOK, map[string]string{"result": "success"})
+	respondWithJSON(w, http.StatusOK, map[string]string{"result": "success"})
 }
 
-// DELETE an existing user
-func DeleteUserEndPoint(w http.ResponseWriter, r *http.Request) {
-	defer r.Body.Close()
-	var user User
+// DeleteUserEndpoint will DELETE an existing user
+func DeleteUserEndpoint(w http.ResponseWriter, r *http.Request, id string) {
+	var user models.User
 	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
 		respondWithError(w, http.StatusBadRequest, "Invalid request payload")
 		return
 	}
+	defer r.Body.Close()
 	if err := dao.Delete(user); err != nil {
 		respondWithError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	respondWithJson(w, http.StatusOK, map[string]string{"result": "success"})
+	respondWithJSON(w, http.StatusOK, map[string]string{"result": "success"})
 }
 
 func respondWithError(w http.ResponseWriter, code int, msg string) {
-	respondWithJson(w, code, map[string]string{"error": msg})
+	respondWithJSON(w, code, map[string]string{"error": msg})
 }
 
-func respondWithJson(w http.ResponseWriter, code int, payload interface{}) {
+func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
 	response, _ := json.Marshal(payload)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
 	w.Write(response)
 }
 
-// Parse the configuration file 'config.toml', and establish a connection to DB
-func init() {
-	config.Read()
+func makeHandler(fn func(http.ResponseWriter, *http.Request, string)) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		m := validPath.FindStringSubmatch(r.URL.Path)
+		if m == nil {
+			http.NotFound(w, r)
+			return
+		}
+		fn(w, r, m[2])
+	}
+}
 
-	dao.Server = config.Server
-	dao.Database = config.Database
-	dao.Connect()
+// Parse the configuration file 'conf.json', and establish a connection to DB
+func init() {
+	file, _ := os.Open("conf.json")
+	defer file.Close()
+	decoder := json.NewDecoder(file)
+	err := decoder.Decode(&dao)
+	if err != nil {
+		log.Fatal("error:", err)
+	}
+
+	dao.Connection()
 }
 
 // Define HTTP request routes
 func main() {
-	r := mux.NewRouter()
-	r.HandleFunc("/users", AllUsersEndPoint).Methods("GET")
-	r.HandleFunc("/users", CreateUserEndPoint).Methods("POST")
-	r.HandleFunc("/users/{id}", UpdateUserEndPoint).Methods("PUT")
-	r.HandleFunc("/users", DeleteUserEndPoint).Methods("DELETE")
-	r.HandleFunc("/users/{id}", FindUserEndpoint).Methods("GET")
-	if err := http.ListenAndServe(":3000", r); err != nil {
+	http.HandleFunc("/users", AllUsersEndpoint)
+	http.HandleFunc("/users/new", CreateUserEndpoint)
+	http.HandleFunc("/users/update/{id}", makeHandler(UpdateUserEndpoint))
+	http.HandleFunc("/users/delete/{id}", makeHandler(DeleteUserEndpoint))
+	http.HandleFunc("/users/find/{id}", makeHandler(FindUserEndpoint))
+	if err := http.ListenAndServe(":3000", nil); err != nil {
 		log.Fatal(err)
 	}
 }
