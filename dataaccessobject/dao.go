@@ -5,13 +5,12 @@ import (
 	"log"
 	"time"
 
-	"user-crud/models"
+	"github.com/BryanSouza91/user-crud/models"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
-	// "go.mongodb.org/mongo-driver/mongo/readpref"
 )
 
 // DAO declaration
@@ -30,7 +29,8 @@ const (
 
 // Connection to database
 func (m *DAO) Connection() {
-	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
 	clientOpts := options.Client().ApplyURI(m.Server)
 	client, err := mongo.Connect(ctx, clientOpts)
 	if err != nil {
@@ -42,7 +42,8 @@ func (m *DAO) Connection() {
 
 // FindAll list of users
 func (m *DAO) FindAll() (users []models.User, err error) {
-	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
 	res := bson.M{}
 	cursor, err := db.Collection(COLLECTION).Find(ctx, res)
 	if err != nil {
@@ -70,7 +71,8 @@ func (m *DAO) FindByID(id string) (user models.User, err error) {
 
 // Insert a user into database
 func (m *DAO) Insert(user models.User) (err error) {
-	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 	_, err = db.Collection(COLLECTION).InsertOne(ctx, &user)
 	if err != nil {
 		log.Fatal(err)
