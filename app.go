@@ -102,7 +102,7 @@ func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
 
 func makeHandler(fn func(http.ResponseWriter, *http.Request, string)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		fmt.Println(r.URL.Path)
+		fmt.Println(r.URL.EscapedPath())
 		m := validPath.FindStringSubmatch(r.URL.EscapedPath())
 		if m == nil {
 			http.NotFound(w, r)

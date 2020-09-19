@@ -69,8 +69,11 @@ func (m *DAO) FindAll() (users []models.User, err error) {
 // FindByID will find a user by its id
 func (m *DAO) FindByID(id string) (user models.User, err error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
-	result := db.Collection(COLLECTION).FindOne(ctx, bson.D{primitive.E{Key: "_id", Value: id}})
-	err = result.Decode(&user)
+	objID, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		log.Fatal(err)
+	}
+	err = db.Collection(COLLECTION).FindOne(ctx, bson.D{{Key: "_id", Value: objID}}).Decode(&user)
 	defer cancel()
 	if err != nil {
 		// ErrNoDocuments means that the filter did not match any documents in the collection
