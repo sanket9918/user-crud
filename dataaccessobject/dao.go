@@ -54,9 +54,8 @@ func (m *DAO) Connection() {
 func (m *DAO) FindAll() (users []models.User, err error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
-	results := bson.M{}
 	opts := options.Find().SetSort(bson.D{primitive.E{Key: "age", Value: -1}})
-	cursor, err := db.Collection(COLLECTION).Find(ctx, results, opts)
+	cursor, err := db.Collection(COLLECTION).Find(ctx, bson.M{}, opts)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -85,28 +84,31 @@ func (m *DAO) FindByID(id string) (user models.User, err error) {
 	return user, err
 }
 
+// Delete an existing user
+func (m *DAO) Delete(id string) (user models.User, err error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
+	objID, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		log.Fatal(err)
+	}
+	err = db.Collection(COLLECTION).FindOneAndDelete(ctx, bson.D{{Key: "_id", Value: objID}}).Decode(&user)
+	if err != nil {
+		// ErrNoDocuments means that the filter did not match any documents in the collection
+		if err == mongo.ErrNoDocuments {
+			return
+		}
+		log.Fatal(err)
+	}
+	return user, err
+}
+
 // Insert a user into database
 func (m *DAO) Insert(user models.User) (err error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
 	_, err = db.Collection(COLLECTION).InsertOne(ctx, &user)
 	if err != nil {
-		log.Fatal(err)
-	}
-	return err
-}
-
-// Delete an existing user
-func (m *DAO) Delete(id string) (err error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
-	defer cancel()
-	opts := options.FindOneAndDelete().SetProjection(bson.D{primitive.E{Key: "_id", Value: id}})
-	err = db.Collection(COLLECTION).FindOneAndDelete(ctx, bson.D{primitive.E{Key: "_id", Value: id}}, opts).Decode(&id)
-	if err != nil {
-		// ErrNoDocuments means that the filter did not match any documents in the collection
-		if err == mongo.ErrNoDocuments {
-			return err
-		}
 		log.Fatal(err)
 	}
 	return err

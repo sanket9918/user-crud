@@ -77,16 +77,17 @@ func UpdateUserEndpoint(w http.ResponseWriter, r *http.Request, id string) {
 		respondWithError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	respondWithJSON(w, http.StatusOK, map[string]string{"result": "success"})
+	respondWithJSON(w, http.StatusOK, user)
 }
 
 // DeleteUserEndpoint will DELETE an existing user
 func DeleteUserEndpoint(w http.ResponseWriter, r *http.Request, id string) {
-	if err := dao.Delete(id); err != nil {
+	deletedUser, err := dao.Delete(id)
+	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	respondWithJSON(w, http.StatusOK, map[string]string{"result": "success"})
+	respondWithJSON(w, http.StatusOK, deletedUser)
 }
 
 func respondWithError(w http.ResponseWriter, code int, msg string) {
@@ -114,10 +115,13 @@ func makeHandler(fn func(http.ResponseWriter, *http.Request, string)) http.Handl
 
 // Parse the configuration file 'conf.json', and establish a connection to DB
 func init() {
-	file, _ := os.Open("conf.json")
-	defer file.Close()
+	file, err := os.Open("conf.json")
+	if err != nil {
+		log.Fatal("error:", err)
+	}
 	decoder := json.NewDecoder(file)
-	err := decoder.Decode(&dao)
+	defer file.Close()
+	err = decoder.Decode(&dao)
 	if err != nil {
 		log.Fatal("error:", err)
 	}
