@@ -16,7 +16,7 @@ import (
 
 var (
 	dao       = dataaccessobject.DAO{}
-	validPath = regexp.MustCompile(`^/users/(update|delete|find)?/([a-z0-9]+)$`)
+	validPath = regexp.MustCompile(`^/users/(update|delete|find)/([a-z0-9]+)$`)
 )
 
 // AllUsersEndpoint will GET list of users
@@ -103,7 +103,7 @@ func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
 func makeHandler(fn func(http.ResponseWriter, *http.Request, string)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		fmt.Println(r.URL.Path)
-		m := validPath.FindStringSubmatch(r.URL.Path)
+		m := validPath.FindStringSubmatch(r.URL.EscapedPath())
 		if m == nil {
 			http.NotFound(w, r)
 			return
@@ -129,9 +129,9 @@ func init() {
 func main() {
 	http.HandleFunc("/users", AllUsersEndpoint)
 	http.HandleFunc("/users/new", CreateUserEndpoint)
-	http.HandleFunc("/users/update/{id}", makeHandler(UpdateUserEndpoint))
-	http.HandleFunc("/users/delete/{id}", makeHandler(DeleteUserEndpoint))
-	http.HandleFunc("/users/find/{id}", makeHandler(FindUserEndpoint))
+	http.HandleFunc("/users/update/", makeHandler(UpdateUserEndpoint))
+	http.HandleFunc("/users/delete/", makeHandler(DeleteUserEndpoint))
+	http.HandleFunc("/users/find/", makeHandler(FindUserEndpoint))
 	if err := http.ListenAndServe(":3000", nil); err != nil {
 		log.Fatal(err)
 	}

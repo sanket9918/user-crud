@@ -17,7 +17,7 @@ go get github.com/gorilla/mux go.mongodb.org/mongo-driver
 ```
 
 * [mux](https://github.com/gorilla/mux) - Request router and dispatcher for matching incoming requests to their respective handler(stdlib in use currently)
-* [mgo](https://go.mongodb.org/mongo-driver) - MongoDB driver
+* [mgo](https://pkg.go.dev/go.mongodb.org/mongo-driver) - MongoDB driver
 
 ### Configuration .json
 Besure to recreate your own conf.json using the example provided

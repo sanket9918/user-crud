@@ -75,7 +75,7 @@ func (m *DAO) FindByID(id string) (user models.User, err error) {
 	if err != nil {
 		// ErrNoDocuments means that the filter did not match any documents in the collection
 		if err == mongo.ErrNoDocuments {
-			return user, err
+			return
 		}
 		log.Fatal(err)
 	}
