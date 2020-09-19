@@ -16,11 +16,11 @@ Simple CRUD implementation utilizing the power of Go and performance of MongoDB 
 go get github.com/gorilla/mux go.mongodb.org/mongo-driver
 ```
 
-* [mux](https://github.com/gorilla/mux) - Request router and dispatcher for matching incoming requests to their respective handler
+* [mux](https://github.com/gorilla/mux) - Request router and dispatcher for matching incoming requests to their respective handler(stdlib in use currently)
 * [mgo](https://go.mongodb.org/mongo-driver) - MongoDB driver
 
 ### Configuration .json
-Besure to recreate your our own conf.json using the example provided
+Besure to recreate your own conf.json using the example provided
 
 ### To get this repository and run
 
