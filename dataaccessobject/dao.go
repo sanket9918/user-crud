@@ -2,6 +2,7 @@ package dataaccessobject
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"time"
 
@@ -29,27 +30,37 @@ const (
 
 // Connection to database
 func (m *DAO) Connection() {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	clientOpts := options.Client().ApplyURI(m.Server)
-	client, err := mongo.Connect(ctx, clientOpts)
+	clientOptions := options.Client().ApplyURI(m.Server)
+	client, err := mongo.NewClient(clientOptions)
 	if err != nil {
 		log.Fatal(err)
 	}
-
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	err = client.Connect(ctx)
+	defer cancel()
+	if err != nil {
+		log.Fatal(err)
+	}
+	// Check the connection
+	err = client.Ping(ctx, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println("Connected to MongoDB!")
 	db = client.Database(m.Database)
 }
 
 // FindAll list of users
 func (m *DAO) FindAll() (users []models.User, err error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
-	res := bson.M{}
-	cursor, err := db.Collection(COLLECTION).Find(ctx, res)
+	results := bson.M{}
+	opts := options.Find().SetSort(bson.D{primitive.E{Key: "age", Value: -1}})
+	cursor, err := db.Collection(COLLECTION).Find(ctx, results, opts)
 	if err != nil {
 		log.Fatal(err)
 	}
-	if err = cursor.All(context.TODO(), &users); err != nil {
+	if err = cursor.All(ctx, &users); err != nil {
 		log.Fatal(err)
 	}
 	return users, err
@@ -57,8 +68,10 @@ func (m *DAO) FindAll() (users []models.User, err error) {
 
 // FindByID will find a user by its id
 func (m *DAO) FindByID(id string) (user models.User, err error) {
-	opts := options.FindOne().SetSort(bson.D{})
-	err = db.Collection(COLLECTION).FindOne(context.TODO(), bson.D{primitive.E{Key: "_id", Value: &user.ID}}, opts).Decode(&user)
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	result := db.Collection(COLLECTION).FindOne(ctx, bson.D{primitive.E{Key: "_id", Value: id}})
+	err = result.Decode(&user)
+	defer cancel()
 	if err != nil {
 		// ErrNoDocuments means that the filter did not match any documents in the collection
 		if err == mongo.ErrNoDocuments {
@@ -71,7 +84,7 @@ func (m *DAO) FindByID(id string) (user models.User, err error) {
 
 // Insert a user into database
 func (m *DAO) Insert(user models.User) (err error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
 	_, err = db.Collection(COLLECTION).InsertOne(ctx, &user)
 	if err != nil {
@@ -81,9 +94,11 @@ func (m *DAO) Insert(user models.User) (err error) {
 }
 
 // Delete an existing user
-func (m *DAO) Delete(user models.User) (err error) {
-	opts := options.FindOneAndDelete().SetProjection(bson.D{primitive.E{Key: "_id", Value: &user}})
-	err = db.Collection(COLLECTION).FindOneAndDelete(context.TODO(), bson.D{primitive.E{Key: "_id", Value: &user}}, opts).Decode(&user)
+func (m *DAO) Delete(id string) (err error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
+	opts := options.FindOneAndDelete().SetProjection(bson.D{primitive.E{Key: "_id", Value: id}})
+	err = db.Collection(COLLECTION).FindOneAndDelete(ctx, bson.D{primitive.E{Key: "_id", Value: id}}, opts).Decode(&id)
 	if err != nil {
 		// ErrNoDocuments means that the filter did not match any documents in the collection
 		if err == mongo.ErrNoDocuments {
@@ -96,10 +111,12 @@ func (m *DAO) Delete(user models.User) (err error) {
 
 // Update an existing user
 func (m *DAO) Update(user models.User) (err error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
 	opts := options.Update().SetUpsert(true)
 	filter := bson.D{primitive.E{Key: "_id", Value: user.ID}}
 	update := bson.D{primitive.E{Key: "$set", Value: &user}}
-	_, err = db.Collection(COLLECTION).UpdateOne(context.TODO(), filter, update, opts)
+	_, err = db.Collection(COLLECTION).UpdateOne(ctx, filter, update, opts)
 	if err != nil {
 		log.Fatal(err)
 	}

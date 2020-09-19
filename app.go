@@ -2,19 +2,21 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
-	"regexp"
 	"os"
+	"regexp"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
 
 	"github.com/BryanSouza91/user-crud/dataaccessobject"
 	"github.com/BryanSouza91/user-crud/models"
 )
+
 var (
-	dao = dataaccessobject.DAO{}
-	validPath = regexp.MustCompile("^/users/(update|delete|find)/([a-zA-Z0-9]+)$")
+	dao       = dataaccessobject.DAO{}
+	validPath = regexp.MustCompile(`^/users/(update|delete|find)?/([a-z0-9]+)$`)
 )
 
 // AllUsersEndpoint will GET list of users
@@ -80,13 +82,7 @@ func UpdateUserEndpoint(w http.ResponseWriter, r *http.Request, id string) {
 
 // DeleteUserEndpoint will DELETE an existing user
 func DeleteUserEndpoint(w http.ResponseWriter, r *http.Request, id string) {
-	var user models.User
-	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
-		respondWithError(w, http.StatusBadRequest, "Invalid request payload")
-		return
-	}
-	defer r.Body.Close()
-	if err := dao.Delete(user); err != nil {
+	if err := dao.Delete(id); err != nil {
 		respondWithError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -106,6 +102,7 @@ func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
 
 func makeHandler(fn func(http.ResponseWriter, *http.Request, string)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		fmt.Println(r.URL.Path)
 		m := validPath.FindStringSubmatch(r.URL.Path)
 		if m == nil {
 			http.NotFound(w, r)
