@@ -15,6 +15,8 @@ import (
 )
 
 var (
+	user      models.User
+	err       error
 	dao       = dataaccessobject.DAO{}
 	validPath = regexp.MustCompile(`^/users/(update|delete|find)/([a-z0-9]+)$`)
 )
@@ -41,7 +43,6 @@ func FindUserEndpoint(w http.ResponseWriter, r *http.Request, id string) {
 
 // CreateUserEndpoint will POST a new user
 func CreateUserEndpoint(w http.ResponseWriter, r *http.Request) {
-	var user models.User
 	if r.Body == nil {
 		http.Error(w, "Please send a request body", 400)
 		return
@@ -61,8 +62,6 @@ func CreateUserEndpoint(w http.ResponseWriter, r *http.Request) {
 
 // UpdateUserEndpoint will PUT update an existing user
 func UpdateUserEndpoint(w http.ResponseWriter, r *http.Request, id string) {
-	var user models.User
-	var err error
 	user.ID, err = primitive.ObjectIDFromHex(id)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, err.Error())
@@ -109,7 +108,7 @@ func makeHandler(fn func(http.ResponseWriter, *http.Request, string)) http.Handl
 			http.NotFound(w, r)
 			return
 		}
-		fn(w, r, m[2])
+		fn(w, r, m[len(m)-1])
 	}
 }
 
@@ -131,12 +130,14 @@ func init() {
 
 // Define HTTP request routes
 func main() {
-	http.HandleFunc("/users", AllUsersEndpoint)
-	http.HandleFunc("/users/new", CreateUserEndpoint)
-	http.HandleFunc("/users/update/", makeHandler(UpdateUserEndpoint))
-	http.HandleFunc("/users/delete/", makeHandler(DeleteUserEndpoint))
-	http.HandleFunc("/users/find/", makeHandler(FindUserEndpoint))
-	if err := http.ListenAndServe(":3000", nil); err != nil {
+	mux := http.NewServeMux()
+
+	mux.HandleFunc("/users", AllUsersEndpoint)
+	mux.HandleFunc("/users/new", CreateUserEndpoint)
+	mux.Handle("/users/update/", makeHandler(UpdateUserEndpoint))
+	mux.Handle("/users/delete/", makeHandler(DeleteUserEndpoint))
+	mux.Handle("/users/find/", makeHandler(FindUserEndpoint))
+	if err = http.ListenAndServe(":3000", mux); err != nil {
 		log.Fatal(err)
 	}
 }
