@@ -10,7 +10,6 @@ import (
 	"regexp"
 	"time"
 
-	"github.com/BryanSouza91/user-crud/models"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -70,7 +69,7 @@ func (m *DAO) Connection() {
 }
 
 // FindAll list of users
-func (m *DAO) FindAll() (users []models.User, err error) {
+func (m *DAO) FindAll() (users []User, err error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
 	opts := options.Find().SetSort(bson.D{primitive.E{Key: "age", Value: -1}})
@@ -85,7 +84,7 @@ func (m *DAO) FindAll() (users []models.User, err error) {
 }
 
 // FindByID will find a user by its id
-func (m *DAO) FindByID(id string) (user models.User, err error) {
+func (m *DAO) FindByID(id string) (user User, err error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	objID, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
@@ -104,7 +103,7 @@ func (m *DAO) FindByID(id string) (user models.User, err error) {
 }
 
 // Delete an existing user
-func (m *DAO) Delete(id string) (user models.User, err error) {
+func (m *DAO) Delete(id string) (user User, err error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
 	objID, err := primitive.ObjectIDFromHex(id)
@@ -123,7 +122,7 @@ func (m *DAO) Delete(id string) (user models.User, err error) {
 }
 
 // Insert a user into database
-func (m *DAO) Insert(user models.User) (err error) {
+func (m *DAO) Insert(user User) (err error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
 	_, err = db.Collection(COLLECTION).InsertOne(ctx, &user)
@@ -134,7 +133,7 @@ func (m *DAO) Insert(user models.User) (err error) {
 }
 
 // Update an existing user
-func (m *DAO) Update(user models.User) (err error) {
+func (m *DAO) Update(user User) (err error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
 	opts := options.Update().SetUpsert(true)
