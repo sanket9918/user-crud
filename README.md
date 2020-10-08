@@ -11,11 +11,7 @@ Simple CRUD implementation utilizing the power of Go and performance of MongoDB 
 
 [![N|Solid](https://sdtimes.com/wp-content/uploads/2018/02/golang.sh_-490x490.png)](https://golang.org/dl/)
 
-### To get basic external modules for REST API
-
- ```sh
-go get go.mongodb.org/mongo-driver
-```
+### External Packages
 
 * [mongo-driver](https://pkg.go.dev/go.mongodb.org/mongo-driver) - MongoDB driver
 
