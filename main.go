@@ -3,11 +3,13 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"regexp"
+	"strconv"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -34,6 +36,7 @@ type DAO struct {
 
 // Database variable declaration
 var (
+	port      *int
 	db        *mongo.Database
 	user      User
 	err       error
@@ -219,10 +222,10 @@ func respondWithError(w http.ResponseWriter, code int, msg string) {
 }
 
 func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
-	response, _ := json.Marshal(payload)
 	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.WriteHeader(code)
-	w.Write(response)
+	json.NewEncoder(w).Encode(payload)
 }
 
 func makeHandler(fn func(http.ResponseWriter, *http.Request, string)) http.HandlerFunc {
@@ -239,6 +242,8 @@ func makeHandler(fn func(http.ResponseWriter, *http.Request, string)) http.Handl
 
 // Parse the configuration file 'conf.json', and establish a connection to DB
 func init() {
+	port = flag.Int("port", 3000, "specified port")
+	flag.Parse()
 	file, err := os.Open("conf.json")
 	if err != nil {
 		log.Fatal("error:", err)
@@ -262,7 +267,8 @@ func main() {
 	mux.Handle("/users/update/", makeHandler(UpdateUserEndpoint))
 	mux.Handle("/users/delete/", makeHandler(DeleteUserEndpoint))
 	mux.Handle("/users/find/", makeHandler(FindUserEndpoint))
-	if err = http.ListenAndServe(":3000", mux); err != nil {
+	fmt.Println(fmt.Sprintf("Listening on port %s", strconv.Itoa(*port)))
+	if err = http.ListenAndServe(":"+strconv.Itoa(*port), mux); err != nil {
 		log.Fatal(err)
 	}
 }
