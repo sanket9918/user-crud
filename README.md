@@ -1,26 +1,26 @@
-# GORestAPI-MongoDB
+# user-crud
 
-Simple REST API in GO language using Mongo DB.
+Work in progress 
+
+Simple CRUD implementation utilizing the power of Go and performance of MongoDB to effectively maintain a database.
 
 # Instructions
 
 ### Install Go Programming language latest version
+[Download and install here](https://go.dev/)
 
 [![N|Solid](https://sdtimes.com/wp-content/uploads/2018/02/golang.sh_-490x490.png)](https://golang.org/dl/)
 
-### To get basic external modules for REST API
+### External Packages
 
- ```sh
-go get github.com/gorilla/mux gopkg.in/mgo.v2 github.com/BurntSushi/toml
-```
+* [mongo-driver](https://pkg.go.dev/go.mongodb.org/mongo-driver) - MongoDB driver
 
-* [mux](https://github.com/gorilla/mux) - Request router and dispatcher for matching incoming requests to their respective handler
-* [mgo](https://gopkg.in/mgo.v2) - MongoDB driver
-* [toml](https://github.com/BurntSushi/toml) - Parse the configuration file (MongoDB server & credentials)
+### Configuration .json
+Besure to recreate your own conf.json using the example provided
 
 ### To get this repository and run
 
  ```sh
-$ git clone https://github.com/nandakumar111/GORestAPI-MongoDB.git
+$ git clone https://github.com/BryanSouza91/user-crud.git
 $ go run app.go
 ```
